@@ -1,0 +1,8 @@
+const protocol = window.location.protocol;
+const host = window.location.host;
+const path = window.location.pathname;
+const query = window.location.search;
+const hash = window.location.hash;
+
+const fullURL = `${protocol}//${host}${path}${query}${hash}`;
+console.log(fullURL);
