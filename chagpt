@@ -1,8 +1,40 @@
-const protocol = window.location.protocol;
-const host = window.location.host;
-const path = window.location.pathname;
-const query = window.location.search;
-const hash = window.location.hash;
+// ValidationTrait.php
+trait ValidationTrait {
+    public function validateRequired($value) {
+        return !empty($value);
+    }
 
-const fullURL = `${protocol}//${host}${path}${query}${hash}`;
-console.log(fullURL);
+    public function validateMinLength($value, $min) {
+        return strlen($value) >= $min;
+    }
+
+    public function validateMaxLength($value, $max) {
+        return strlen($value) <= $max;
+    }
+
+    public function validateEmail($value) {
+        return filter_var($value, FILTER_VALIDATE_EMAIL) !== false;
+    }
+
+    public function validatePhone($value) {
+        return preg_match('/^\+?\d{10,15}$/', $value); // пример для телефона
+    }
+
+    public function validateDate($value) {
+        return strtotime($value) !== false;
+    }
+
+    public function validateUrl($value) {
+        return filter_var($value, FILTER_VALIDATE_URL) !== false;
+    }
+
+    // Убираем лишние пробелы
+    public function cleanSpaces($value) {
+        return trim(preg_replace('/\s+/', ' ', $value));
+    }
+
+    // Очистка от тегов
+    public function cleanTags($value) {
+        return strip_tags($value);
+    }
+}
