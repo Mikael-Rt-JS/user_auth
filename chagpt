@@ -1,40 +1,59 @@
-// ValidationTrait.php
-trait ValidationTrait {
-    public function validateRequired($value) {
-        return !empty($value);
+// Validator.php
+class Validator {
+    use ValidationTrait;
+
+    private $errors = [];
+    private $cleaned = [];
+
+    public function validate(array $data, array $rules) {
+        foreach ($rules as $field => $ruleSet) {
+            foreach ($ruleSet as $rule) {
+                $this->applyRule($field, $rule, $data[$field] ?? null);
+            }
+        }
+
+        return empty($this->errors);
     }
 
-    public function validateMinLength($value, $min) {
-        return strlen($value) >= $min;
+    private function applyRule($field, $rule, $value) {
+        // Разбираем правило, если есть параметр (например min:3)
+        if (strpos($rule, ':') !== false) {
+            list($ruleName, $param) = explode(':', $rule);
+        } else {
+            $ruleName = $rule;
+            $param = null;
+        }
+
+        // Применяем валидацию
+        $method = "validate" . ucfirst($ruleName);
+        if (method_exists($this, $method)) {
+            $isValid = $this->$method($value, $param);
+
+            if (!$isValid) {
+                $this->addError($field, "$field не прошел проверку на $ruleName");
+            }
+        }
     }
 
-    public function validateMaxLength($value, $max) {
-        return strlen($value) <= $max;
+    private function addError($field, $message) {
+        $this->errors[$field][] = $message;
     }
 
-    public function validateEmail($value) {
-        return filter_var($value, FILTER_VALIDATE_EMAIL) !== false;
+    // Получение ошибок
+    public function getErrors() {
+        return $this->errors;
     }
 
-    public function validatePhone($value) {
-        return preg_match('/^\+?\d{10,15}$/', $value); // пример для телефона
+    // Получение очищенных данных
+    public function getCleaned() {
+        foreach ($_POST as $key => $value) {
+            $this->cleaned[$key] = $this->cleanTags($this->cleanSpaces($value)); // Очистка данных
+        }
+        return $this->cleaned;
     }
 
-    public function validateDate($value) {
-        return strtotime($value) !== false;
-    }
-
-    public function validateUrl($value) {
-        return filter_var($value, FILTER_VALIDATE_URL) !== false;
-    }
-
-    // Убираем лишние пробелы
-    public function cleanSpaces($value) {
-        return trim(preg_replace('/\s+/', ' ', $value));
-    }
-
-    // Очистка от тегов
-    public function cleanTags($value) {
-        return strip_tags($value);
+    // Сохраняем ошибки в сессию
+    public function flashErrors($key = 'form_errors') {
+        $_SESSION[$key] = $this->getErrors();
     }
 }
