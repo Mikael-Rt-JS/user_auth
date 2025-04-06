@@ -1,59 +1,83 @@
-// Validator.php
-class Validator {
-    use ValidationTrait;
+// form_handler.php
+session_start();
 
-    private $errors = [];
-    private $cleaned = [];
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $validator = new Validator();
 
-    public function validate(array $data, array $rules) {
-        foreach ($rules as $field => $ruleSet) {
-            foreach ($ruleSet as $rule) {
-                $this->applyRule($field, $rule, $data[$field] ?? null);
-            }
-        }
+    // Правила для валидации
+    $rules = [
+        'username' => ['required', 'min:3', 'max:20'],
+        'email'    => ['required', 'email'],
+        'phone'    => ['phone'],
+        'date'     => ['date'],
+        'link'     => ['url'],
+    ];
 
-        return empty($this->errors);
+    if (!$validator->validate($_POST, $rules)) {
+        // Ошибки и старые данные сохраняются в сессии
+        $validator->flashErrors(); // Ошибки сохраняются в $_SESSION['form_errors']
+        $_SESSION['old'] = $_POST; // Старые данные в $_SESSION['old']
+
+        // Перенаправляем обратно на форму с ошибками
+        header('Location: form.php');
+        exit;
     }
 
-    private function applyRule($field, $rule, $value) {
-        // Разбираем правило, если есть параметр (например min:3)
-        if (strpos($rule, ':') !== false) {
-            list($ruleName, $param) = explode(':', $rule);
-        } else {
-            $ruleName = $rule;
-            $param = null;
-        }
+    // Если всё прошло успешно, очищенные данные
+    $clean = $validator->getCleaned();
 
-        // Применяем валидацию
-        $method = "validate" . ucfirst($ruleName);
-        if (method_exists($this, $method)) {
-            $isValid = $this->$method($value, $param);
+    // Можно сохранить в БД, отправить письмо и т.д.
+    saveToDatabase($clean['username'], $clean['email']);
 
-            if (!$isValid) {
-                $this->addError($field, "$field не прошел проверку на $ruleName");
-            }
-        }
-    }
-
-    private function addError($field, $message) {
-        $this->errors[$field][] = $message;
-    }
-
-    // Получение ошибок
-    public function getErrors() {
-        return $this->errors;
-    }
-
-    // Получение очищенных данных
-    public function getCleaned() {
-        foreach ($_POST as $key => $value) {
-            $this->cleaned[$key] = $this->cleanTags($this->cleanSpaces($value)); // Очистка данных
-        }
-        return $this->cleaned;
-    }
-
-    // Сохраняем ошибки в сессию
-    public function flashErrors($key = 'form_errors') {
-        $_SESSION[$key] = $this->getErrors();
-    }
+    // Очистка старых данных и успешный редирект
+    unset($_SESSION['old']);
+    header('Location: success.php');
+    exit;
 }
+
+
+
+------
+
+
+// form.php
+session_start();
+
+function old($key) {
+    return $_SESSION['old'][$key] ?? '';
+}
+
+function formError($key) {
+    $errors = $_SESSION['form_errors'][$key] ?? [];
+    return implode(', ', $errors);
+}
+?>
+
+<form action="form_handler.php" method="post">
+    <label>Username</label>
+    <input type="text" name="username" value="<?= htmlspecialchars(old('username')) ?>">
+    <div class="error"><?= formError('username') ?></div>
+
+    <label>Email</label>
+    <input type="text" name="email" value="<?= htmlspecialchars(old('email')) ?>">
+    <div class="error"><?= formError('email') ?></div>
+
+    <label>Phone</label>
+    <input type="text" name="phone" value="<?= htmlspecialchars(old('phone')) ?>">
+    <div class="error"><?= formError('phone') ?></div>
+
+    <label>Date</label>
+    <input type="text" name="date" value="<?= htmlspecialchars(old('date')) ?>">
+    <div class="error"><?= formError('date') ?></div>
+
+    <label>Link</label>
+    <input type="text" name="link" value="<?= htmlspecialchars(old('link')) ?>">
+    <div class="error"><?= formError('link') ?></div>
+
+    <button type="submit">Отправить</button>
+</form>
+
+<?php
+// Убираем ошибки из сессии после того, как они были выведены
+unset($_SESSION['form_errors']);
+
