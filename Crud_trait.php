@@ -111,6 +111,42 @@ User::delete(5);
 // Где phone равен ...
 $users = User::where(['phone' => '+37444123456']);
 
+trait CrudTrait {
+    protected static $table = '';
+
+    protected static function db(): PDO {
+        return MySQL::getConnection();
+    }
+
+    public static function create(array $data) {
+        $db = static::db();
+        $columns = implode(',', array_keys($data));
+        $placeholders = ':' . implode(', :', array_keys($data));
+        $sql = "INSERT INTO " . static::$table . " ($columns) VALUES ($placeholders)";
+
+        // Отладочный вывод
+        echo "SQL: $sql\n";
+        print_r($data);
+
+        $stmt = $db->prepare($sql);
+        $stmt->execute($data); // Здесь $data - это массив, передаваемый правильно
+        return $db->lastInsertId();
+    }
+
+    public static function read(int $id) {
+        $db = static::db();
+        $sql = "SELECT * FROM " . static::$table . " WHERE id = :id";
+
+        // Отладочный вывод
+        echo "SQL: $sql\n";
+
+        $stmt = $db->prepare($sql);
+        $stmt->execute(['id' => $id]); // Передаем ассоциативный массив для параметра
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    // Другие методы...
+}
 
 
 
