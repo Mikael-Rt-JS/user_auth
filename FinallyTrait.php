@@ -179,6 +179,9 @@ public static function paginate(PDO $connection, string $table, int $page = 1, i
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
+TraitCrudDinamic::findAll($connection, 'products', ['id', 'name', 'price']);
+TraitCrudDinamic::read($connection, 'users', 5, ['name', 'email']);
+TraitCrudDinamic::paginate($connection, 'orders', 2, 10, ['id', 'status']);
 
 
 
